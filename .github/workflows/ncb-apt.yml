@@ -1,0 +1,101 @@
+name: Build and Publish Nerdctl CNI BuildKit Debs
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 每天凌晨 2 点运行
+  workflow_dispatch: # 允许手动触发
+
+env:
+  CONTACT_EMAIL: "huangnomolo@gmail.com"
+  FINAL_DEB_DIR: "${GITHUB_WORKSPACE}/../final_deb"
+
+jobs:
+  check-and-build:
+    runs-on: debian-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprepro dpkg-dev jq
+
+      - name: Import GPG Key (Manual)
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          # 创建 .gnupg 目录并设置正确权限 (必须是 700)
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+
+          # 导入私钥
+          # 使用 printf 而不是 echo 是为了防止私钥中的换行符被错误处理
+          printf "%s" "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Check for updates
+        id: check
+        run: |
+          chmod +x scripts/check_update.sh
+          ./scripts/check_update.sh
+
+      - name: Run Build Script
+        env:
+          NERDCTL_VERSION: ${{ steps.check.outputs.NERDCTL_VERSION }}
+          CNI_VERSION: ${{ steps.check.outputs.CNI_VERSION }}
+          BUILDKIT_VERSION: ${{ steps.check.outputs.BUILDKIT_VERSION }}
+          NERDCTL_TAG: ${{ steps.check.outputs.NERDCTL_TAG }}
+          CNI_TAG: ${{ steps.check.outputs.CNI_TAG }}
+          BUILDKIT_TAG: ${{ steps.check.outputs.BUILDKIT_TAG }}
+        run: |
+          chmod +x scripts/build_sh/*.sh
+
+          # 构建各个 DEB 包
+          for script in scripts/build_sh/*.sh; do
+            echo "Running build script: $script"
+            bash "$script"
+          done
+
+      - name: Update APT Repo (GitHub Pages)
+        run: |
+          # 切换到 gh-pages 分支 (孤儿分支)
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          
+          # 拉取 gh-pages 分支的内容到 repo 目录
+          git fetch origin gh-pages:gh-pages || git switch --orphan gh-pages
+          git switch gh-pages
+          
+          # 如果是第一次运行，创建必要的配置
+          mkdir -p conf
+          if [ ! -f conf/distributions ]; then
+          cat <<EOF > conf/distributions
+          Origin: MyPersonalRepo
+          Label: AptRepo
+          Codename: stable
+          Architectures: amd64
+          Components: main
+          Description: Personal Apt Repository
+          SignWith: default
+          EOF
+          fi
+          
+          # 使用 reprepro 添加 deb 包
+          # 如果包版本已存在，reprepro 会报错，所以要容错
+          for package in ${FINAL_DEB_DIR}/*.deb; do
+            reprepro -b . includedeb stable "$package" || echo "Package $package likely already exists"
+          done
+          
+          # 生成提交说明
+          COMMIT_MSG="Update repo with version:
+          - nerdctl: $NERDCTL_VERSION
+          - CNI: $CNI_VERSION
+          - buildkit: $BUILDKIT_VERSION"
+
+          # 提交更改
+          git add dists pool db
+          git commit -m "$COMMIT_MSG" || echo "No changes to commit"
+          git push origin gh-pages
