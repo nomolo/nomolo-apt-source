@@ -11,7 +11,8 @@ env:
 
 jobs:
   check-and-build:
-    runs-on: debian-latest
+    runs-on: ubuntu-latest
+    container: debian:trixie-slim
     permissions:
       contents: write
     
@@ -21,8 +22,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y reprepro dpkg-dev jq
+          apt-get update
+          apt-get install -y reprepro dpkg-dev jq
 
       - name: Import GPG Key (Manual)
         env:
