@@ -7,7 +7,6 @@ on:
 
 env:
   CONTACT_EMAIL: "huangnomolo@gmail.com"
-  FINAL_DEB_DIR: "${{ runner.temp }}/final_deb"
 
 jobs:
   check-and-build:
@@ -16,6 +15,9 @@ jobs:
       contents: write
     
     steps:
+      - name: Setup Environment Variables
+        run: echo "FINAL_DEB_DIR=${{ runner.temp }}/final_deb" >> $GITHUB_ENV
+          
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
