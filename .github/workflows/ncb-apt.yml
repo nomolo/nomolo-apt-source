@@ -40,6 +40,8 @@ jobs:
 
       - name: Check for updates
         id: check
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
         run: |
           chmod +x scripts/check_update.sh
           ./scripts/check_update.sh
