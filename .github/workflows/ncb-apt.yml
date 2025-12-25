@@ -45,8 +45,7 @@ jobs:
         env:
           TOKEN: ${{ secrets.TOKEN }}
         run: |
-          chmod +x scripts/check_update.sh
-          ./scripts/check_update.sh
+           bash scripts/check_update.sh
 
       - name: Run Build Script
         env:
@@ -59,7 +58,6 @@ jobs:
         run: |
 
           mkdir -p "$FINAL_DEB_DIR"
-          chmod +x scripts/build_sh/*.sh
 
           # 构建各个 DEB 包
           for script in scripts/build_sh/*.sh; do
