@@ -56,7 +56,7 @@ Section: admin
 Priority: optional
 Architecture: $ARCH
 Maintainer: Action Bot <$CONTACT_EMAIL>
-Suggests: buildkit-np, cni-plugins-np
+Suggests: buildkit-np, cni-plugins-np, containerd.io
 Description: Nerdctl Debian Package
  Auto-packaged from upstream nerdctl release.
  This package installs nerdctl.

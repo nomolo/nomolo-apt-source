@@ -26,6 +26,7 @@ PKG_DIR="${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}"
 mkdir -p "${PKG_DIR}/usr/local/bin"
 mkdir -p "${PKG_DIR}/DEBIAN"
 mkdir -p "${PKG_DIR}/lib/systemd/system"
+mkdir -p "${PKG_DIR}/etc/buildkit"
 
 # 解压并归位文件
 echo "解压并移动文件..."
@@ -78,31 +79,27 @@ TasksMax=infinity
 WantedBy=multi-user.target
 EOF
 
-
-# Postinst
-cat > "$PKG_DIR"/DEBIAN/postinst <<EOF
-#!/bin/bash
-set -e
-
-# 创建配置目录 (安全操作)
-mkdir -p /etc/buildkit
-
-# 仅当配置文件不存在时创建，防止覆盖用户修改
-if [ ! -f /etc/buildkit/buildkitd.toml ]; then
-    echo "Initializing default /etc/buildkit/buildkitd.toml..."
-    cat > /etc/buildkit/buildkitd.toml <<EOL
+# 创建配置文件
+cat > "${PKG_DIR}/etc/buildkit/buildkitd.toml" <<EOF
 [worker.oci]
   enabled = false
 
 [worker.containerd]
   enabled = true
   namespace = "default"
-EOL
-    chmod 644 /etc/buildkit/buildkitd.toml
-else
-    echo "Configuration /etc/buildkit/buildkitd.toml exists, skipping overwrite."
-fi
+EOF
+chmod 644 "${PKG_DIR}/etc/buildkit/buildkitd.toml"
 
+cat > "${PKG_DIR}/DEBIAN/conffiles" <<EOF
+/etc/buildkit/buildkitd.toml
+EOF
+
+# Postinst
+cat > "$PKG_DIR"/DEBIAN/postinst <<EOF
+#!/bin/bash
+set -e
+
+# 赋予可执行权限
 chmod +x /usr/local/bin/buildkitd
 chmod +x /usr/local/bin/buildctl
 
