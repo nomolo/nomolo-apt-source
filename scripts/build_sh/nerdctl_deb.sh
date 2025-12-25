@@ -23,27 +23,27 @@ wget -q "$NERDCTL_DOWNLOAD_URL" -O "$WORK_DIR/nerdctl.tar.gz"
 
 # 准备打包目录结构
 PKG_DIR="${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}"
-mkdir -p "$PKG_DIR"/usr/local/bin
+mkdir -p "$PKG_DIR"/usr/bin
 mkdir -p "$PKG_DIR"/DEBIAN
 
 # 先解压到临时目录，再挑选文件
-# 这样可以防止 tar 包里意外包含 README 或 License 文件污染 /usr/local/bin
+# 这样可以防止 tar 包里意外包含 README 或 License 文件污染 /usr/bin
 echo "解压并筛选文件..."
 mkdir -p "$WORK_DIR/extract_tmp"
 tar -xzf "$WORK_DIR/nerdctl.tar.gz" -C "$WORK_DIR/extract_tmp"
 
 # 移动二进制文件和核心脚本到安装目录
-mv "$WORK_DIR/extract_tmp/nerdctl" "$PKG_DIR/usr/local/bin/"
+mv "$WORK_DIR/extract_tmp/nerdctl" "$PKG_DIR/usr/bin/"
 # 如果存在 rootless 设置脚本，也一起带上 (通常包含在包里)
 if [ -f "$WORK_DIR/extract_tmp/containerd-rootless-setuptool.sh" ]; then
-    mv "$WORK_DIR/extract_tmp/containerd-rootless-setuptool.sh" "$PKG_DIR/usr/local/bin/"
+    mv "$WORK_DIR/extract_tmp/containerd-rootless-setuptool.sh" "$PKG_DIR/usr/bin/"
 fi
 if [ -f "$WORK_DIR/extract_tmp/containerd-rootless.sh" ]; then
-    mv "$WORK_DIR/extract_tmp/containerd-rootless.sh" "$PKG_DIR/usr/local/bin/"
+    mv "$WORK_DIR/extract_tmp/containerd-rootless.sh" "$PKG_DIR/usr/bin/"
 fi
 
 # 赋予可执行权限 (安全兜底)
-chmod 755 "$PKG_DIR"/usr/local/bin/*
+chmod 755 "$PKG_DIR"/usr/bin/*
 
 # 生成 Control 文件
 # 计算大小 (KB)
@@ -60,7 +60,7 @@ Suggests: buildkit-np, cni-plugins-np, containerd.io
 Description: Nerdctl Debian Package
  Auto-packaged from upstream nerdctl release.
  This package installs nerdctl.
- Installed to /usr/local/bin.
+ Installed to /usr/bin.
 Installed-Size: $INSTALLED_SIZE
 Conflicts: nerdctl
 Provides: nerdctl
@@ -68,7 +68,7 @@ EOF
 
 # 构建 .deb
 echo "打包 .deb..."
-dpkg-deb --build "$PKG_DIR"
+dpkg-deb --build --root-owner-group "$PKG_DIR"
 mv "${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}.deb" "${FINAL_DEB_DIR}/${DEB_NAME}.deb"
 
 # 清理

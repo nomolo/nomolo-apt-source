@@ -23,14 +23,14 @@ wget -q "$DOWNLOAD_URL" -O "$WORK_DIR/buildkit.tgz"
 
 # 准备打包目录结构
 PKG_DIR="${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}"
-mkdir -p "${PKG_DIR}/usr/local/bin"
+mkdir -p "${PKG_DIR}/usr"
 mkdir -p "${PKG_DIR}/DEBIAN"
-mkdir -p "${PKG_DIR}/lib/systemd/system"
+mkdir -p "${PKG_DIR}/usr/lib/systemd/system"
 mkdir -p "${PKG_DIR}/etc/buildkit"
 
 # 解压并归位文件
 echo "解压并移动文件..."
-tar -xzf "$WORK_DIR/buildkit.tgz" -C "${PKG_DIR}/usr/local/"
+tar -xzf "$WORK_DIR/buildkit.tgz" -C "${PKG_DIR}/usr"
 
 # 生成 Control 文件
 # 计算大小 (KB)
@@ -47,21 +47,21 @@ Depends: git, runc | crun, ca-certificates
 Description: BuildKit Debian Package
  Auto-packaged from upstream buildkit release.
  This package installs moby/buildkit binaries.
- Installed to /usr/local/bin.
+ Installed to /usr/bin.
 Installed-Size: $INSTALLED_SIZE
 Conflicts: buildkit, docker-buildx
 Provides: buildkit
 EOF
 
 # 创建 Systemd Service 文件
-cat > "${PKG_DIR}/lib/systemd/system/buildkit.service" <<EOF
+cat > "${PKG_DIR}/usr/lib/systemd/system/buildkit.service" <<EOF
 [Unit]
 Description=BuildKit
 Documentation=https://github.com/moby/buildkit
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/buildkitd
+ExecStart=/usr/bin/buildkitd
 Type=notify
 Delegate=yes
 KillMode=process
@@ -100,8 +100,8 @@ cat > "$PKG_DIR"/DEBIAN/postinst <<EOF
 set -e
 
 # 赋予可执行权限
-chmod +x /usr/local/bin/buildkitd
-chmod +x /usr/local/bin/buildctl
+chmod +x /usr/bin/buildkitd
+chmod +x /usr/bin/buildctl
 
 # Systemd重载
 if command -v systemctl >/dev/null 2>&1; then
@@ -126,7 +126,7 @@ chmod 755 "$PKG_DIR"/DEBIAN/prerm
 
 # 构建 .deb
 echo "打包 .deb..."
-dpkg-deb --build "$PKG_DIR"
+dpkg-deb --build --root-owner-group "$PKG_DIR"
 mv "${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}.deb" "${FINAL_DEB_DIR}/${DEB_NAME}.deb"
 
 # 清理

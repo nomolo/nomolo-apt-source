@@ -1,18 +1,22 @@
-name: Build and Publish Nerdctl CNI BuildKit Debs
+name: Build, Lint and Publish APT Repo
 
 on:
   schedule:
-    - cron: '0 2 * * *' # 每天凌晨 2 点运行
-  workflow_dispatch: # 允许手动触发
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 env:
   CONTACT_EMAIL: "huangnomolo@gmail.com"
 
 jobs:
-  check-and-build:
+  # === JOB 1: 构建、检查 ===
+  build-and-lint:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    # 将版本号导出，供下一个发布 Job 使用
+    outputs:
+      NERDCTL_VERSION: ${{ steps.check.outputs.NERDCTL_VERSION }}
+      CNI_VERSION: ${{ steps.check.outputs.CNI_VERSION }}
+      BUILDKIT_VERSION: ${{ steps.check.outputs.BUILDKIT_VERSION }}
     
     steps:
       - name: Setup Environment Variables
@@ -24,19 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y reprepro dpkg-dev jq curl gnupg wget
-
-      - name: Import GPG Key (Manual)
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        run: |
-          # 创建 .gnupg 目录并设置正确权限 (必须是 700)
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-
-          # 导入私钥
-          # 使用 printf 而不是 echo 是为了防止私钥中的换行符被错误处理
-          printf "%s" "$GPG_PRIVATE_KEY" | gpg --batch --import
+          sudo apt-get install -y dpkg-dev jq curl wget lintian
 
       - name: Check for updates
         id: check
@@ -54,20 +46,69 @@ jobs:
           CNI_TAG: ${{ steps.check.outputs.CNI_TAG }}
           BUILDKIT_TAG: ${{ steps.check.outputs.BUILDKIT_TAG }}
         run: |
-
           mkdir -p "$FINAL_DEB_DIR"
-
-          # 构建各个 DEB 包
           for script in scripts/build_sh/*.sh; do
             echo "Running build script: $script"
             bash "$script"
           done
 
-      - name: Update APT Repo (GitHub Pages)
+      - name: Run Lintian Check
+        run: |
+          echo "###Lintian Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          # 把结果同时输出到 屏幕(tee) 和 Summary
+          lintian --info --no-tag-display-limit "$FINAL_DEB_DIR"/*.deb | tee -a $GITHUB_STEP_SUMMARY || true
+          
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-packages
+          path: ${{ env.FINAL_DEB_DIR }}/*.deb
+          retention-days: 1
+
+  # === JOB 2: 发布到 APT 仓库（需要审批） ===
+  publish:
+    needs: build-and-lint  # 必须等上一步成功
+    runs-on: ubuntu-latest
+    environment: production # 触发在 Settings 里设置的审批保护
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Setup Environment Variables
+        run: echo "DOWNLOAD_DEB_DIR=${{ runner.temp }}/downloaded_debs" >> $GITHUB_ENV
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-packages
+          path: ${{ env.DOWNLOAD_DEB_DIR }} # 下载到临时目录
+
+      - name: Install Reprepro & GPG
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprepro gnupg
+
+      - name: Import GPG Key
         env:
-          NERDCTL_VERSION: ${{ steps.check.outputs.NERDCTL_VERSION }}
-          CNI_VERSION: ${{ steps.check.outputs.CNI_VERSION }}
-          BUILDKIT_VERSION: ${{ steps.check.outputs.BUILDKIT_VERSION }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          printf "%s" "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Update APT Repo
+        env:
+          # 从上一个 Job 获取版本号
+          NERDCTL_VERSION: ${{ needs.build-and-lint.outputs.NERDCTL_VERSION }}
+          CNI_VERSION: ${{ needs.build-and-lint.outputs.CNI_VERSION }}
+          BUILDKIT_VERSION: ${{ needs.build-and-lint.outputs.BUILDKIT_VERSION }}
         run: |
           # 切换到 gh-pages 分支 (孤儿分支)
           git config --global user.name "GitHub Action"
@@ -82,11 +123,11 @@ jobs:
             git switch --orphan gh-pages
             git rm -rf . || true
           fi
-          
-          # 如果是第一次运行，创建必要的配置
+
+          # 初始化配置
           mkdir -p conf
           if [ ! -f conf/distributions ]; then
-          cat <<EOF > conf/distributions
+            cat <<EOF > conf/distributions
           Origin: Nomolo
           Label: AptRepo
           Codename: stable
@@ -96,23 +137,23 @@ jobs:
           SignWith: default
           EOF
           fi
-          
+
           # 添加包
           count=0
-          for package in "$FINAL_DEB_DIR"/*.deb; do
+          for package in "$DOWNLOAD_DEB_DIR"/*.deb; do
             if [ -f "$package" ]; then
               echo "Processing $package..."
-              # 不需要 sudo，reprepro 操作的是当前目录
-              reprepro -b . includedeb stable "$package" || echo "Package likely exists, skipping."
+              reprepro -b . includedeb stable "$package" || echo "Skipping duplicate."
               count=$((count+1))
             fi
           done
-          
+
           if [ "$count" -eq 0 ]; then
              echo "No deb files found to add."
+             exit 0
           fi
-          
-          # 提交
+
+          # 提交更改
           COMMIT_MSG="Update repo with version:
           - nerdctl: $NERDCTL_VERSION
           - CNI: $CNI_VERSION

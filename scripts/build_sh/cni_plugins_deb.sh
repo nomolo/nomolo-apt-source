@@ -56,7 +56,7 @@ EOF
 
 # 构建 .deb
 echo "打包 .deb..."
-dpkg-deb --build "$PKG_DIR"
+dpkg-deb --build --root-owner-group "$PKG_DIR"
 mv "${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}.deb" "${FINAL_DEB_DIR}/${DEB_NAME}.deb"
 
 # 清理
