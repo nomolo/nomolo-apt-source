@@ -7,23 +7,24 @@ on:
 
 env:
   CONTACT_EMAIL: "huangnomolo@gmail.com"
-  FINAL_DEB_DIR: "${GITHUB_WORKSPACE}/../final_deb"
+  FINAL_DEB_DIR: "${{ runner.temp }}/final_deb"
 
 jobs:
   check-and-build:
     runs-on: ubuntu-latest
-    container: debian:trixie-slim
     permissions:
       contents: write
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整的历史记录，以便处理 gh-pages 分支
 
       - name: Install dependencies
         run: |
-          apt-get update
-          apt-get install -y reprepro dpkg-dev jq curl gnupg wget
+          sudo apt-get update
+          sudo apt-get install -y reprepro dpkg-dev jq curl gnupg wget
 
       - name: Import GPG Key (Manual)
         env:
@@ -52,6 +53,8 @@ jobs:
           CNI_TAG: ${{ steps.check.outputs.CNI_TAG }}
           BUILDKIT_TAG: ${{ steps.check.outputs.BUILDKIT_TAG }}
         run: |
+
+          mkdir -p "$FINAL_DEB_DIR"
           chmod +x scripts/build_sh/*.sh
 
           # 构建各个 DEB 包
@@ -61,6 +64,10 @@ jobs:
           done
 
       - name: Update APT Repo (GitHub Pages)
+        env:
+          NERDCTL_VERSION: ${{ steps.check.outputs.NERDCTL_VERSION }}
+          CNI_VERSION: ${{ steps.check.outputs.CNI_VERSION }}
+          BUILDKIT_VERSION: ${{ steps.check.outputs.BUILDKIT_VERSION }}
         run: |
           # 切换到 gh-pages 分支 (孤儿分支)
           git config --global user.name "GitHub Action"
@@ -74,29 +81,42 @@ jobs:
           mkdir -p conf
           if [ ! -f conf/distributions ]; then
           cat <<EOF > conf/distributions
-          Origin: MyPersonalRepo
+          Origin: Nomolo
           Label: AptRepo
           Codename: stable
           Architectures: amd64
           Components: main
-          Description: Personal Apt Repository
+          Description: Nomolo's Personal Apt Repository
           SignWith: default
           EOF
           fi
           
-          # 使用 reprepro 添加 deb 包
-          # 如果包版本已存在，reprepro 会报错，所以要容错
-          for package in ${FINAL_DEB_DIR}/*.deb; do
-            reprepro -b . includedeb stable "$package" || echo "Package $package likely already exists"
+          # 添加包
+          count=0
+          for package in "$FINAL_DEB_DIR"/*.deb; do
+            if [ -f "$package" ]; then
+              echo "Processing $package..."
+              # 不需要 sudo，reprepro 操作的是当前目录
+              reprepro -b . includedeb stable "$package" || echo "Package likely exists, skipping."
+              count=$((count+1))
+            fi
           done
           
-          # 生成提交说明
+          if [ "$count" -eq 0 ]; then
+             echo "No deb files found to add."
+          fi
+          
+          # 提交
           COMMIT_MSG="Update repo with version:
           - nerdctl: $NERDCTL_VERSION
           - CNI: $CNI_VERSION
           - buildkit: $BUILDKIT_VERSION"
 
-          # 提交更改
-          git add dists pool db
-          git commit -m "$COMMIT_MSG" || echo "No changes to commit"
-          git push origin gh-pages
+          git add dists pool db conf
+          
+          if ! git diff --cached --quiet; then
+            git commit -m "$COMMIT_MSG"
+            git push origin gh-pages
+          else
+            echo "No changes to commit."
+          fi

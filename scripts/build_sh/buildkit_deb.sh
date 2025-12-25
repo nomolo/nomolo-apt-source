@@ -16,20 +16,20 @@ WORK_DIR="${DEB_NAME}_work_dir"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 
-# 下载 nerdctl
+# 下载 buildkit
 DOWNLOAD_URL="https://github.com/moby/buildkit/releases/download/${TAG}/buildkit-${TAG}.linux-amd64.tar.gz"
-
 echo "正在下载: $DOWNLOAD_URL"
-wget "$DOWNLOAD_URL" -O "$WORK_DIR/buildkit.tgz"
+wget -q "$DOWNLOAD_URL" -O "$WORK_DIR/buildkit.tgz"
 
 # 准备打包目录结构
 PKG_DIR="${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}"
 mkdir -p "${PKG_DIR}/usr/local/bin"
 mkdir -p "${PKG_DIR}/DEBIAN"
+mkdir -p "${PKG_DIR}/lib/systemd/system"
 
 # 解压并归位文件
 echo "解压并移动文件..."
-tar -xzf "$WORK_DIR/buildkit.tgz" -C "${PKG_DIR}/usr/local/bin/"
+tar -xzf "$WORK_DIR/buildkit.tgz" -C "${PKG_DIR}/usr/local/"
 
 # 生成 Control 文件
 # 计算大小 (KB)
@@ -42,6 +42,7 @@ Section: admin
 Priority: optional
 Architecture: $ARCH
 Maintainer: Action Bot <$CONTACT_EMAIL>
+Depends: git, runc | crun, ca-certificates
 Description: BuildKit Debian Package
  Auto-packaged from upstream buildkit release.
  This package installs moby/buildkit binaries.
@@ -51,25 +52,80 @@ Conflicts: buildkit, docker-buildx
 Provides: buildkit
 EOF
 
-# 
+# 创建 Systemd Service 文件
+cat > "${PKG_DIR}/lib/systemd/system/buildkit.service" <<EOF
+[Unit]
+Description=BuildKit
+Documentation=https://github.com/moby/buildkit
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/buildkitd
+Type=notify
+Delegate=yes
+KillMode=process
+Restart=always
+RestartSec=5
+# 限制打开文件数，生产环境必须
+LimitNOFILE=1048576
+# 限制进程数
+LimitNPROC=infinity
+# 限制核心转储
+LimitCORE=infinity
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+
+# Postinst
 cat > "$PKG_DIR"/DEBIAN/postinst <<EOF
 #!/bin/bash
 set -e
 
-cat > /etc/buildkit/buildkitd.toml <<EOL
+# 创建配置目录 (安全操作)
+mkdir -p /etc/buildkit
+
+# 仅当配置文件不存在时创建，防止覆盖用户修改
+if [ ! -f /etc/buildkit/buildkitd.toml ]; then
+    echo "Initializing default /etc/buildkit/buildkitd.toml..."
+    cat > /etc/buildkit/buildkitd.toml <<EOL
 [worker.oci]
   enabled = false
 
 [worker.containerd]
   enabled = true
-  # namespace should be "k8s.io" for Kubernetes (including Rancher Desktop)
   namespace = "default"
 EOL
+    chmod 644 /etc/buildkit/buildkitd.toml
+else
+    echo "Configuration /etc/buildkit/buildkitd.toml exists, skipping overwrite."
+fi
 
-chmod 644 /etc/buildkit/buildkitd.toml
 chmod +x /usr/local/bin/buildkitd
-/usr/local/bin/buildkitd
+chmod +x /usr/local/bin/buildctl
+
+# Systemd重载
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload || true
+    systemctl enable buildkit || true
+fi
 EOF
+
+# 为 postinst 脚本添加执行权限
+chmod 755 "$PKG_DIR"/DEBIAN/postinst
+
+# 卸载前脚本停止服务
+cat > "$PKG_DIR"/DEBIAN/prerm <<EOF
+#!/bin/bash
+set -e
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl stop buildkit || true
+    systemctl disable buildkit || true
+fi
+EOF
+chmod 755 "$PKG_DIR"/DEBIAN/prerm
 
 # 构建 .deb
 echo "打包 .deb..."

@@ -18,19 +18,32 @@ mkdir -p "$WORK_DIR"
 
 # 下载 nerdctl
 NERDCTL_DOWNLOAD_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/nerdctl-${NERDCTL_VERSION}-linux-${ARCH}.tar.gz"
-
 echo "正在下载: $NERDCTL_DOWNLOAD_URL"
-wget "$NERDCTL_DOWNLOAD_URL" -O "$WORK_DIR/nerdctl.tar.gz"
+wget -q "$NERDCTL_DOWNLOAD_URL" -O "$WORK_DIR/nerdctl.tar.gz"
 
 # 准备打包目录结构
 PKG_DIR="${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}"
 mkdir -p "$PKG_DIR"/usr/local/bin
 mkdir -p "$PKG_DIR"/DEBIAN
 
-# 解压并归位文件
-echo "解压并移动文件..."
-tar -xzf "$WORK_DIR/nerdctl.tar.gz" -C "${PKG_DIR}/usr/local/bin/"
+# 先解压到临时目录，再挑选文件
+# 这样可以防止 tar 包里意外包含 README 或 License 文件污染 /usr/local/bin
+echo "解压并筛选文件..."
+mkdir -p "$WORK_DIR/extract_tmp"
+tar -xzf "$WORK_DIR/nerdctl.tar.gz" -C "$WORK_DIR/extract_tmp"
 
+# 移动二进制文件和核心脚本到安装目录
+mv "$WORK_DIR/extract_tmp/nerdctl" "$PKG_DIR/usr/local/bin/"
+# 如果存在 rootless 设置脚本，也一起带上 (通常包含在包里)
+if [ -f "$WORK_DIR/extract_tmp/containerd-rootless-setuptool.sh" ]; then
+    mv "$WORK_DIR/extract_tmp/containerd-rootless-setuptool.sh" "$PKG_DIR/usr/local/bin/"
+fi
+if [ -f "$WORK_DIR/extract_tmp/containerd-rootless.sh" ]; then
+    mv "$WORK_DIR/extract_tmp/containerd-rootless.sh" "$PKG_DIR/usr/local/bin/"
+fi
+
+# 赋予可执行权限 (安全兜底)
+chmod 755 "$PKG_DIR"/usr/local/bin/*
 
 # 生成 Control 文件
 # 计算大小 (KB)
@@ -43,6 +56,7 @@ Section: admin
 Priority: optional
 Architecture: $ARCH
 Maintainer: Action Bot <$CONTACT_EMAIL>
+Suggests: buildkit-np, cni-plugins-np
 Description: Nerdctl Debian Package
  Auto-packaged from upstream nerdctl release.
  This package installs nerdctl.

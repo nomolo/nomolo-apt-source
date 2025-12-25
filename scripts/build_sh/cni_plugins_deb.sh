@@ -16,11 +16,10 @@ WORK_DIR="${DEB_NAME}_work_dir"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 
-# 下载 nerdctl
+# 下载 cni-plugins
 DOWNLOAD_URL="https://github.com/containernetworking/plugins/releases/download/${TAG}/cni-plugins-linux-amd64-${TAG}.tgz"
-
 echo "正在下载: $DOWNLOAD_URL"
-wget "$DOWNLOAD_URL" -O "$WORK_DIR/cni.tgz"
+wget -q "$DOWNLOAD_URL" -O "$WORK_DIR/cni.tgz"
 
 # 准备打包目录结构
 PKG_DIR="${WORK_DIR}/${DEB_NAME}_${VERSION}_${ARCH}"
@@ -30,6 +29,10 @@ mkdir -p "${PKG_DIR}/DEBIAN"
 # 解压并归位文件
 echo "解压并移动文件..."
 tar -xzf "$WORK_DIR/cni.tgz" -C "${PKG_DIR}/opt/cni/bin/"
+
+chmod 755 "${PKG_DIR}/opt/cni"
+chmod 755 "${PKG_DIR}/opt/cni/bin"
+chmod 755 "${PKG_DIR}/opt/cni/bin/"*
 
 # 生成 Control 文件
 # 计算大小 (KB)
