@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y reprepro dpkg-dev jq
+          apt-get install -y reprepro dpkg-dev jq curl gnupg
 
       - name: Import GPG Key (Manual)
         env:

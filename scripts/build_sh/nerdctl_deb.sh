@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e  # 遇到错误立即退出
+set -euo pipefail  # 遇到错误立即退出
 
 # 从环境变量获取参数，如果没有则报错
 VERSION="${NERDCTL_VERSION:?Need to set NERDCTL_VERSION}"
