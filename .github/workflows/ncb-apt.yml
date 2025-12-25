@@ -80,7 +80,7 @@ jobs:
           else
             echo "gh-pages branch does not exist. Creating orphan branch..."
             git switch --orphan gh-pages
-            git rm -rf .
+            git rm -rf *
           fi
           
           # 如果是第一次运行，创建必要的配置
