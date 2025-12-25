@@ -1,0 +1,19 @@
+Origin: Nomolo
+Label: AptRepo
+Codename: stable
+Date: Thu, 25 Dec 2025 13:30:15 UTC
+Architectures: amd64
+Components: main
+Description: Nomolo's Personal Apt Repository
+MD5Sum:
+ a7d8b68ad531651422f6f799396179d5 1922 main/binary-amd64/Packages
+ 8de7e47b7644ebecf3afde1e3486b7c3 823 main/binary-amd64/Packages.gz
+ e9ce1fda211afc21e4ee5e6e63b5d7b1 112 main/binary-amd64/Release
+SHA1:
+ 135544996dd101bb63fcdd62035dc61380fd4565 1922 main/binary-amd64/Packages
+ fa775fbc58b3247cba22afc045093b39d8712685 823 main/binary-amd64/Packages.gz
+ c55a3cb9b436014913d79303d79d8b41d5b860f6 112 main/binary-amd64/Release
+SHA256:
+ 85f7232cc2284f4ac1684cfd58e9765f30ea056116dbc89a3163b2a258917e3b 1922 main/binary-amd64/Packages
+ 2a8bfa0bf949fac51e0f145b805b53accb5ef62a9ca1eadfe20c72e9275aa7a8 823 main/binary-amd64/Packages.gz
+ 7329cfc908e6f5861c0e0f24785f621365a38c63944972cf136dbf5fdd33d5b1 112 main/binary-amd64/Release

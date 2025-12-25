@@ -1,0 +1,5 @@
+Component: main
+Origin: Nomolo
+Label: AptRepo
+Architecture: amd64
+Description: Nomolo's Personal Apt Repository

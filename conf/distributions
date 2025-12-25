@@ -1,0 +1,7 @@
+Origin: Nomolo
+Label: AptRepo
+Codename: stable
+Architectures: amd64
+Components: main
+Description: Nomolo's Personal Apt Repository
+SignWith: default

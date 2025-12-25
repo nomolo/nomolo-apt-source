@@ -1,0 +1,59 @@
+Package: buildkit-np
+Version: 0.26.3
+Architecture: amd64
+Maintainer: Action Bot <huangnomolo@gmail.com>
+Depends: git, runc | crun, ca-certificates
+Priority: optional
+Section: admin
+Filename: pool/main/b/buildkit-np/buildkit-np_0.26.3_amd64.deb
+Size: 71947386
+SHA256: ef6bed2ccff4ed195b74152edb9ce1315e1a5d6f25760c800a823ac98e81c568
+SHA1: c7997dbb67057d1ce1917bb026c56715b3765f81
+MD5sum: cdd35a15bfde0d69c764f91be769164e
+Description: BuildKit Debian Package
+ Auto-packaged from upstream buildkit release.
+ This package installs moby/buildkit binaries.
+ Installed to /usr/bin.
+Installed-Size: 190416
+Conflicts: buildkit, docker-buildx
+Provides: buildkit
+
+Package: cni-plugins-np
+Version: 1.9.0
+Architecture: amd64
+Maintainer: Action Bot <huangnomolo@gmail.com>
+Priority: optional
+Section: admin
+Filename: pool/main/c/cni-plugins-np/cni-plugins-np_1.9.0_amd64.deb
+Size: 38710016
+SHA256: cfd768743954cb8676b2fb6d0c1718ef983fd4300df7d2bedbb77afd56d4582a
+SHA1: a82bdf395c31f692940e46875ffc64116354ab82
+MD5sum: 3ebf0bc0cbf70696a912413d84bc826a
+Description: CNI Plugins Debian Package
+ Auto-packaged from upstream containernetworking plugins release.
+ This package installs containernetworking plugins binaries.
+ Installed to /opt/cni/bin.
+Installed-Size: 96144
+Conflicts: cni-plugins
+Provides: cni-plugins
+
+Package: nerdctl-np
+Version: 2.2.1
+Architecture: amd64
+Maintainer: Action Bot <huangnomolo@gmail.com>
+Suggests: buildkit-np, cni-plugins-np, containerd.io
+Priority: optional
+Section: admin
+Filename: pool/main/n/nerdctl-np/nerdctl-np_2.2.1_amd64.deb
+Size: 9023590
+SHA256: 4fb3047f2905470ec68b9b625f4a523ee1e0452729a2fe5e6aa9384ab199cdaf
+SHA1: 2a2860d66e24a6791511f7791295e720bfb9c273
+MD5sum: 740ac04481fda6d085206b4911ec5458
+Description: Nerdctl Debian Package
+ Auto-packaged from upstream nerdctl release.
+ This package installs nerdctl.
+ Installed to /usr/bin.
+Installed-Size: 29700
+Conflicts: nerdctl
+Provides: nerdctl
+

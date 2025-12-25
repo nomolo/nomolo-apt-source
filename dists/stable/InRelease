@@ -1,0 +1,38 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: Nomolo
+Label: AptRepo
+Codename: stable
+Date: Thu, 25 Dec 2025 13:30:15 UTC
+Architectures: amd64
+Components: main
+Description: Nomolo's Personal Apt Repository
+MD5Sum:
+ a7d8b68ad531651422f6f799396179d5 1922 main/binary-amd64/Packages
+ 8de7e47b7644ebecf3afde1e3486b7c3 823 main/binary-amd64/Packages.gz
+ e9ce1fda211afc21e4ee5e6e63b5d7b1 112 main/binary-amd64/Release
+SHA1:
+ 135544996dd101bb63fcdd62035dc61380fd4565 1922 main/binary-amd64/Packages
+ fa775fbc58b3247cba22afc045093b39d8712685 823 main/binary-amd64/Packages.gz
+ c55a3cb9b436014913d79303d79d8b41d5b860f6 112 main/binary-amd64/Release
+SHA256:
+ 85f7232cc2284f4ac1684cfd58e9765f30ea056116dbc89a3163b2a258917e3b 1922 main/binary-amd64/Packages
+ 2a8bfa0bf949fac51e0f145b805b53accb5ef62a9ca1eadfe20c72e9275aa7a8 823 main/binary-amd64/Packages.gz
+ 7329cfc908e6f5861c0e0f24785f621365a38c63944972cf136dbf5fdd33d5b1 112 main/binary-amd64/Release
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEE8CP84fMejdquPYolopSNZk4ptz0FAmlNPGcACgkQopSNZk4p
+tz0YXw/6A6aN67ooSwBRjc/jTDJHZIm1VTym2nohoZ2bmWqB/5gYyCQQh0mBzIPw
+gIwPJY/E+ihbrJsbL5WL2gcgr41SSM6zMtQVKr5a5tV6+O07x2Xu6mMruOt/nJw5
+05g07TONUt/pUomdvf2nq3LDWvvcyLNhV1AH9nVjHn1RWD2K5AMxqN/QKh9jQ4iF
+UJ++yi5TAAiM13TUYfWp5A9yI4RxKvNWLsetf3j7FVbc5Mt1E3vlRWy1ucniYUOv
+z8d4jzkXmmsErjBv7aQdBL0KSP0uU0j97kZdTXpqXlKA2gKThYN+qxP86P6AsLU7
+5ucP0AF9c2lgpAlPelBOp7Av7rS4SUZpWV9uLYEW5p7xysp32EyLsIdCl6BAbRvh
+KPb/alQm/QM4R3G5XVs4fxN7e1Xs/V4nVL5u3y3wxh8hUeSdYk7nDg0s+CGphEL6
+CDycJeAWYA7pQQLZIhYQHYN12u4XXDSFj9i5C9iTg7wkuyHGFoOgnRBTwnVuqza4
+WEEfwhGr+zTRylA2NTy1+qiXoelfSfbbrnxLMiQLhMm2aAhNPEhbs514Us5qQJhV
+lCemeaQP554ciaKIxlkD6TIu7pLQSWE6OhrbJf7F6UWX2uE+Fteirmn6qisFvSkk
+xqcYkmc2+Zb5/gBFFNtnpGDrQ/f3R/GFRRBVpzj1FzV0g3oTPlU=
+=K+FV
+-----END PGP SIGNATURE-----
